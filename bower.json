@@ -1,0 +1,18 @@
+{
+  "name": "purescript-httpure-rest-router",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.0",
+    "purescript-httpure": "^0.7.1",
+    "purescript-foreign-generic": "^7.0.0"
+  },
+  "devDependencies": {
+    "purescript-console": "^4.1.0",
+    "purescript-psci-support": "^4.0.0"
+  }
+}
