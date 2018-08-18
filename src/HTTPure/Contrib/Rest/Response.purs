@@ -1,4 +1,4 @@
-module HTTPure.Rest.Response
+module HTTPure.Contrib.Rest.Response
   ( okJSON
   , badRequestJSON
   ) where
@@ -8,6 +8,7 @@ import Prelude
 import Effect.Aff (Aff)
 import Foreign.Class (class Encode)
 import Foreign.Generic (encodeJSON)
+
 import HTTPure as HTTPure
 
 contentTypeJSON :: HTTPure.Headers

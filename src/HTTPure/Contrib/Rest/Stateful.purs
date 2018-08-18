@@ -1,4 +1,4 @@
-module HTTPure.Rest.Stateful
+module HTTPure.Contrib.Rest.Stateful
   ( readState
   , RO
   , readWriteState, readWriteState'

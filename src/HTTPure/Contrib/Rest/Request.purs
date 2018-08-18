@@ -1,4 +1,4 @@
-module HTTPure.Rest.Request (Request, fromRequest) where
+module HTTPure.Contrib.Rest.Request (Request, fromRequest) where
 
 import Prelude
 

@@ -14,8 +14,8 @@ import Effect.Console as Console
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (defaultOptions, genericEncode, genericDecode)
 import HTTPure as HTTPure
-import HTTPure.Rest as Rest
-import HTTPure.Router as Router
+import HTTPure.Contrib.Rest as Rest
+import HTTPure.Contrib.Router as Router
 
 
 -- TODO item

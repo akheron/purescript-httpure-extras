@@ -1,4 +1,4 @@
-module HTTPure.Rest.Endpoint
+module HTTPure.Contrib.Rest.Endpoint
   ( Endpoint
   , endpoint
   , list
@@ -23,8 +23,9 @@ import Foreign (ForeignError, renderForeignError)
 import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (decodeJSON)
 import Foreign.Object as Object
+
 import HTTPure as HTTPure
-import HTTPure.Rest.Request as Request
+import HTTPure.Contrib.Rest.Request as Request
 
 newtype JSONErrors = JSONErrors (NonEmptyList ForeignError)
 

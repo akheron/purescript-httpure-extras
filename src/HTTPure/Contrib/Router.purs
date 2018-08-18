@@ -1,4 +1,4 @@
-module HTTPure.Router (Route, router, route) where
+module HTTPure.Contrib.Router (Route, router, route) where
 
 import Prelude
 
@@ -20,7 +20,7 @@ route = Route
 -- | `router` takes an array of routes and returns a function that can
 -- | be used as the request handler with `HTTPure.serve`.
 -- |
--- | Matches are searched in the order which they are in the array. 
+-- | Matches are searched in the order which they are in the array.
 -- |
 -- | ``` purescript
 -- | routes :: Array Route
