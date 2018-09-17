@@ -1,4 +1,4 @@
-module TodoExample (main) where
+module Todo (main) where
 
 import Prelude
 
@@ -54,13 +54,14 @@ exampleTodos :: Array Todo
 exampleTodos = [ todo1, todo2 ]
 
 
--- Helper for finding todos
+-- Helpers for finding todos
 
 matchId :: Int -> Todo -> Boolean
 matchId id (Todo todo) = id == todo.id
 
 findTodo :: Int -> Array Todo -> Maybe Todo
 findTodo id = Array.find (matchId id)
+
 
 -- List, create, read, update and delete request handlers for the TODO resource
 

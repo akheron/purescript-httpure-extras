@@ -20,6 +20,12 @@ bower link purescript-httpure
 
 ## Examples
 
+Run any of the examples like this:
+
+```
+pulp run -I examples -m Todo
+```
+
 [Todo.purs](https://github.com/cprussin/purescript-httpure-rest-router/tree/master/examples/Todo.purs)
 
 A simple, stateless, incomplete TODO backend app.
