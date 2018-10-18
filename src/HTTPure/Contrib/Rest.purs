@@ -13,6 +13,10 @@ import HTTPure.Contrib.Rest.Endpoint
   , read
   , update, update'
   , delete
+  , collectionGET
+  , collectionPOST, collectionPOST'
+  , instanceGET
+  , instancePOST, instancePOST'
   )
 import HTTPure.Contrib.Rest.Request (Request)
 import HTTPure.Contrib.Rest.Response
