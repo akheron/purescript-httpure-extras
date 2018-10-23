@@ -1,8 +1,5 @@
 module HTTPure.Contrib.Rest.Endpoint
   ( Endpoint
-  , CollectionHandler
-  , InstanceHandler
-  , SubPathHandler
   , endpoint
   , list
   , create
@@ -49,7 +46,7 @@ type CollectionHandler = HTTPure.Request -> Aff HTTPure.Response
 type InstanceHandler id = id -> HTTPure.Request -> Aff HTTPure.Response
 data SubPathHandler a = SubPathHandler HTTPure.Method HTTPure.Path a
 
-type Endpoint id =
+data Endpoint id = Endpoint
   { list :: CollectionHandler
   , create :: CollectionHandler
   , read :: InstanceHandler id
@@ -62,15 +59,16 @@ type Endpoint id =
 
 endpoint :: forall id. (String -> Maybe id) -> Endpoint id
 endpoint readId =
-  { list: collectionNotFound
-  , create: collectionNotFound
-  , read: instanceNotFound
-  , update: instanceNotFound
-  , delete: instanceNotFound
-  , collectionHandlers: []
-  , instanceHandlers: []
-  , readId
-  }
+  Endpoint
+    { list: collectionNotFound
+    , create: collectionNotFound
+    , read: instanceNotFound
+    , update: instanceNotFound
+    , delete: instanceNotFound
+    , collectionHandlers: []
+    , instanceHandlers: []
+    , readId
+    }
   where
     collectionNotFound _ = HTTPure.notFound
     instanceNotFound _ _ = HTTPure.notFound
@@ -80,8 +78,8 @@ list
    . (Request.Request Unit Unit -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-list listHandler handlers =
-  handlers { list = collectionHandler listHandler }
+list listHandler (Endpoint ep) =
+  Endpoint $ ep { list = collectionHandler listHandler }
 
 
 create
@@ -100,8 +98,8 @@ create'
   -> (Request.Request Unit requestBody -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-create' bodyDecoder createHandler handlers =
-  handlers { create = collectionHandlerWithBody bodyDecoder createHandler }
+create' bodyDecoder createHandler (Endpoint ep) =
+  Endpoint $ ep { create = collectionHandlerWithBody bodyDecoder createHandler }
 
 
 read
@@ -109,8 +107,8 @@ read
    . (Request.Request id Unit -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-read readHandler handlers =
-  handlers { read = instanceHandler readHandler }
+read readHandler (Endpoint ep) =
+  Endpoint $ ep { read = instanceHandler readHandler }
 
 
 update
@@ -129,8 +127,8 @@ update'
   -> (Request.Request id requestBody -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-update' bodyDecoder updateHandler handlers =
-  handlers { update = instanceHandlerWithBody bodyDecoder updateHandler }
+update' bodyDecoder updateHandler (Endpoint ep) =
+  Endpoint $ ep { update = instanceHandlerWithBody bodyDecoder updateHandler }
 
 
 delete
@@ -138,8 +136,8 @@ delete
    . (Request.Request id Unit -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-delete deleteHandler handlers =
-  handlers { delete = instanceHandler deleteHandler }
+delete deleteHandler (Endpoint ep) =
+  Endpoint $ ep { delete = instanceHandler deleteHandler }
 
 
 collectionGET
@@ -148,10 +146,11 @@ collectionGET
   -> (Request.Request Unit Unit -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-collectionGET prefix getHandler handlers =
-  handlers { collectionHandlers =
-                Array.snoc handlers.collectionHandlers subPathHandler
-           }
+collectionGET prefix getHandler (Endpoint ep) =
+  Endpoint $
+    ep { collectionHandlers =
+            Array.snoc ep.collectionHandlers subPathHandler
+       }
   where
     subPathHandler =
       SubPathHandler HTTPure.Get prefix $ collectionHandler getHandler
@@ -173,10 +172,11 @@ collectionPOST'
   -> (Request.Request Unit requestBody -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-collectionPOST' bodyDecoder prefix postHandler handlers =
-  handlers { collectionHandlers =
-                Array.snoc handlers.collectionHandlers subPathHandler
-           }
+collectionPOST' bodyDecoder prefix postHandler (Endpoint ep) =
+  Endpoint $
+    ep { collectionHandlers =
+            Array.snoc ep.collectionHandlers subPathHandler
+       }
   where
     subPathHandler =
       SubPathHandler HTTPure.Post prefix $
@@ -189,10 +189,11 @@ instanceGET
   -> (Request.Request id Unit -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-instanceGET prefix getHandler handlers =
-  handlers { instanceHandlers =
-                Array.snoc handlers.instanceHandlers subPathHandler
-           }
+instanceGET prefix getHandler (Endpoint ep) =
+  Endpoint $
+    ep { instanceHandlers =
+            Array.snoc ep.instanceHandlers subPathHandler
+       }
   where
     subPathHandler =
       SubPathHandler HTTPure.Get prefix $ instanceHandler getHandler
@@ -214,10 +215,11 @@ instancePOST'
   -> (Request.Request id requestBody -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-instancePOST' bodyDecoder prefix postHandler handlers =
-  handlers { instanceHandlers =
-                Array.snoc handlers.instanceHandlers subPathHandler
-           }
+instancePOST' bodyDecoder prefix postHandler (Endpoint ep) =
+  Endpoint $
+    ep { instanceHandlers =
+            Array.snoc ep.instanceHandlers subPathHandler
+       }
   where
     subPathHandler =
       SubPathHandler HTTPure.Post prefix $
@@ -290,7 +292,7 @@ runStandardHandler
    . Endpoint id
   -> HTTPure.Request
   -> Maybe (Aff HTTPure.Response)
-runStandardHandler ep request@{ path, method } =
+runStandardHandler (Endpoint ep) request@{ path, method } =
   handle method path
   where
     handle HTTPure.Get [] = Just $ ep.list request
@@ -309,7 +311,7 @@ runInstanceHandler
    . Endpoint id
   -> HTTPure.Request
   -> Maybe (Aff HTTPure.Response)
-runInstanceHandler ep request = do
+runInstanceHandler (Endpoint ep) request = do
   id <- Array.head request.path >>= ep.readId
   let subPath = Maybe.fromMaybe [] $ Array.tail request.path
   handle request.method subPath id
@@ -329,7 +331,7 @@ runCollectionHandler
    . Endpoint id
   -> HTTPure.Request
   -> Maybe (Aff HTTPure.Response)
-runCollectionHandler ep request = do
+runCollectionHandler (Endpoint ep) request = do
   handle request.method request.path
 
   where
