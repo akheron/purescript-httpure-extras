@@ -3,8 +3,8 @@ module HTTPure.Contrib.Router (Route, router, route) where
 import Prelude
 
 import Data.Array as Array
-import Data.Foldable (find)
-import Data.Maybe (Maybe(Just, Nothing))
+import Data.Foldable as Foldable
+import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff)
 import HTTPure as HTTPure
 
@@ -38,7 +38,7 @@ router
   -> HTTPure.Request
   -> Aff HTTPure.Response
 router routes request@{ path } =
-  case find (\(Route prefix _) -> startsWith prefix) routes of
+  case Foldable.find (\(Route prefix _) -> startsWith prefix) routes of
     Just (Route prefix handler) ->
       handler $ request { path = subpath prefix }
     Nothing ->
