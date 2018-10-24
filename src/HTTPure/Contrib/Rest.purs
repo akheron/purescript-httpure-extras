@@ -7,16 +7,18 @@ module HTTPure.Contrib.Rest
 
 import HTTPure.Contrib.Rest.Endpoint
   ( Endpoint
+  , EndpointOptions
+  , BodyErrors
   , endpoint
   , list
   , create, create'
   , read
   , update, update'
   , delete
-  , collectionGET
-  , collectionPOST, collectionPOST'
-  , instanceGET
-  , instancePOST, instancePOST'
+  , collectionRoute
+  , collectionRouteWithBody, collectionRouteWithBody'
+  , instanceRoute
+  , instanceRouteWithBody, instanceRouteWithBody'
   )
 import HTTPure.Contrib.Rest.Request (Request)
 import HTTPure.Contrib.Rest.Response

@@ -1,5 +1,7 @@
 module HTTPure.Contrib.Rest.Endpoint
   ( Endpoint
+  , EndpointOptions
+  , BodyErrors
   , endpoint
   , list
   , create
@@ -8,12 +10,10 @@ module HTTPure.Contrib.Rest.Endpoint
   , update
   , update'
   , delete
-  , collectionGET
-  , collectionPOST
-  , collectionPOST'
-  , instanceGET
-  , instancePOST
-  , instancePOST'
+  , collectionRoute
+  , collectionRouteWithBody, collectionRouteWithBody'
+  , instanceRoute
+  , instanceRouteWithBody, instanceRouteWithBody'
   , run
   ) where
 
@@ -22,29 +22,39 @@ import Prelude
 import Control.Alt ((<|>))
 import Control.Monad.Except as Except
 import Data.Array as Array
+import Data.Either (Either(..))
 import Data.Either as Either
-import Data.List.NonEmpty (NonEmptyList)
-import Data.Maybe (Maybe(Just, Nothing))
+import Data.Foldable as Foldable
+import Data.Int as Int
+import Data.Maybe (Maybe(..))
 import Data.Maybe as Maybe
 import Effect.Aff (Aff)
-import Foreign (ForeignError, renderForeignError)
-import Foreign.Class (class Decode, class Encode, encode)
+import Foreign as Foreign
+import Foreign.Class (class Decode)
 import Foreign.Generic (decodeJSON)
-import Foreign.Object as Object
 import HTTPure as HTTPure
 import HTTPure.Contrib.Rest.Request as Request
+import Partial.Unsafe (unsafePartial)
 
-newtype JSONErrors = JSONErrors (NonEmptyList ForeignError)
-
-instance encodeJSONErrors :: Encode JSONErrors where
-  encode (JSONErrors errors) =
-    let arr = Array.fromFoldable (map renderForeignError errors)
-    in encode (Object.singleton "errors" arr)
-
+type BodyErrors = Foreign.MultipleErrors
 
 type CollectionHandler = HTTPure.Request -> Aff HTTPure.Response
 type InstanceHandler id = id -> HTTPure.Request -> Aff HTTPure.Response
 data SubPathHandler a = SubPathHandler HTTPure.Method HTTPure.Path a
+
+
+type EndpointOptions id =
+  { readId :: String -> Maybe id
+  , bodyError :: BodyErrors -> Aff HTTPure.Response
+  }
+
+
+defaultBodyError :: BodyErrors -> Aff HTTPure.Response
+defaultBodyError errors =
+  HTTPure.badRequest'
+    (HTTPure.header "Content-Type" "text/plain")
+    (Foldable.intercalate "\n" $ Foreign.renderForeignError <$> errors)
+
 
 data Endpoint id = Endpoint
   { list :: CollectionHandler
@@ -55,10 +65,20 @@ data Endpoint id = Endpoint
   , collectionHandlers :: Array (SubPathHandler CollectionHandler)
   , instanceHandlers :: Array (SubPathHandler (InstanceHandler id))
   , readId :: String -> Maybe id
+  , bodyError :: BodyErrors -> Aff HTTPure.Response
   }
 
-endpoint :: forall id. (String -> Maybe id) -> Endpoint id
-endpoint readId =
+
+endpoint :: Endpoint Int
+endpoint =
+  endpoint'
+    { readId: Int.fromString
+    , bodyError: defaultBodyError
+    }
+
+
+endpoint' :: forall id. EndpointOptions id -> Endpoint id
+endpoint' { readId, bodyError } =
   Endpoint
     { list: collectionNotFound
     , create: collectionNotFound
@@ -68,10 +88,12 @@ endpoint readId =
     , collectionHandlers: []
     , instanceHandlers: []
     , readId
+    , bodyError
     }
   where
     collectionNotFound _ = HTTPure.notFound
     instanceNotFound _ _ = HTTPure.notFound
+
 
 list
   :: forall id
@@ -89,17 +111,17 @@ create
   -> Endpoint id
   -> Endpoint id
 create =
-  create' (Either.hush <<< Except.runExcept <<< decodeJSON)
+  create' (Except.runExcept <<< decodeJSON)
 
 
 create'
   :: forall id requestBody
-   . (String -> Maybe requestBody)
+   . (String -> Either BodyErrors requestBody)
   -> (Request.Request Unit requestBody -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
 create' bodyDecoder createHandler (Endpoint ep) =
-  Endpoint $ ep { create = collectionHandlerWithBody bodyDecoder createHandler }
+  Endpoint $ ep { create = collectionHandlerWithBody bodyDecoder ep.bodyError createHandler }
 
 
 read
@@ -118,17 +140,17 @@ update
   -> Endpoint id
   -> Endpoint id
 update =
-  update' (Either.hush <<< Except.runExcept <<< decodeJSON)
+  update' (Except.runExcept <<< decodeJSON)
 
 
 update'
   :: forall id requestBody
-   . (String -> Maybe requestBody)
+   . (String -> Either BodyErrors requestBody)
   -> (Request.Request id requestBody -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
 update' bodyDecoder updateHandler (Endpoint ep) =
-  Endpoint $ ep { update = instanceHandlerWithBody bodyDecoder updateHandler }
+  Endpoint $ ep { update = instanceHandlerWithBody bodyDecoder ep.bodyError updateHandler }
 
 
 delete
@@ -140,90 +162,99 @@ delete deleteHandler (Endpoint ep) =
   Endpoint $ ep { delete = instanceHandler deleteHandler }
 
 
-collectionGET
+collectionRoute
   :: forall id
    . HTTPure.Path
+  -> HTTPure.Method
   -> (Request.Request Unit Unit -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-collectionGET prefix getHandler (Endpoint ep) =
+collectionRoute prefix method handler (Endpoint ep) =
   Endpoint $
     ep { collectionHandlers =
             Array.snoc ep.collectionHandlers subPathHandler
        }
   where
     subPathHandler =
-      SubPathHandler HTTPure.Get prefix $ collectionHandler getHandler
+      SubPathHandler method prefix $ collectionHandler handler
 
-collectionPOST
+collectionRouteWithBody
   :: forall id requestBody
    . Decode requestBody
   => HTTPure.Path
+  -> HTTPure.Method
   -> (Request.Request Unit requestBody -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-collectionPOST =
-  collectionPOST' (Either.hush <<< Except.runExcept <<< decodeJSON)
+collectionRouteWithBody =
+  collectionRouteWithBody' (Except.runExcept <<< decodeJSON)
 
-collectionPOST'
+
+collectionRouteWithBody'
   :: forall id requestBody
-   . (String -> Maybe requestBody)
+   . (String -> Either BodyErrors requestBody)
   -> HTTPure.Path
+  -> HTTPure.Method
   -> (Request.Request Unit requestBody -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-collectionPOST' bodyDecoder prefix postHandler (Endpoint ep) =
+collectionRouteWithBody' bodyDecoder prefix method handler (Endpoint ep) =
   Endpoint $
     ep { collectionHandlers =
             Array.snoc ep.collectionHandlers subPathHandler
        }
   where
     subPathHandler =
-      SubPathHandler HTTPure.Post prefix $
-        collectionHandlerWithBody bodyDecoder postHandler
+      SubPathHandler method prefix $
+        collectionHandlerWithBody bodyDecoder ep.bodyError handler
 
 
-instanceGET
+instanceRoute
   :: forall id
    . HTTPure.Path
+  -> HTTPure.Method
   -> (Request.Request id Unit -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-instanceGET prefix getHandler (Endpoint ep) =
+instanceRoute prefix method handler (Endpoint ep) =
   Endpoint $
     ep { instanceHandlers =
             Array.snoc ep.instanceHandlers subPathHandler
        }
   where
     subPathHandler =
-      SubPathHandler HTTPure.Get prefix $ instanceHandler getHandler
+      SubPathHandler method prefix $ instanceHandler handler
 
-instancePOST
+
+instanceRouteWithBody
   :: forall id requestBody
    . Decode requestBody
   => HTTPure.Path
+  -> HTTPure.Method
   -> (Request.Request id requestBody -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-instancePOST =
-  instancePOST' (Either.hush <<< Except.runExcept <<< decodeJSON)
+instanceRouteWithBody =
+  instanceRouteWithBody' (Except.runExcept <<< decodeJSON)
 
-instancePOST'
+
+instanceRouteWithBody'
   :: forall id requestBody
-   . (String -> Maybe requestBody)
+   . (String -> Either BodyErrors requestBody)
   -> HTTPure.Path
+  -> HTTPure.Method
   -> (Request.Request id requestBody -> Aff HTTPure.Response)
   -> Endpoint id
   -> Endpoint id
-instancePOST' bodyDecoder prefix postHandler (Endpoint ep) =
+instanceRouteWithBody' bodyDecoder prefix method postHandler (Endpoint ep) =
   Endpoint $
     ep { instanceHandlers =
             Array.snoc ep.instanceHandlers subPathHandler
        }
   where
     subPathHandler =
-      SubPathHandler HTTPure.Post prefix $
-        instanceHandlerWithBody bodyDecoder postHandler
+      SubPathHandler method prefix $
+        instanceHandlerWithBody bodyDecoder ep.bodyError postHandler
 
 
 run
@@ -245,21 +276,22 @@ collectionHandler
   -> HTTPure.Request
   -> Aff HTTPure.Response
 collectionHandler handler httpureRequest =
-  case Request.fromRequest (const $ Just unit) unit httpureRequest of
-    Nothing -> HTTPure.badRequest ""  -- Shouldn't happen
-    Just request -> handler request
+  handler $
+    unsafePartial Either.fromRight $
+      Request.fromRequest (const $ Right unit) unit httpureRequest
 
 
 collectionHandlerWithBody
   :: forall requestBody
-   . (String -> Maybe requestBody)
+   . (String -> Either BodyErrors requestBody)
+  -> (BodyErrors -> Aff HTTPure.Response)
   -> (Request.Request Unit requestBody -> Aff HTTPure.Response)
   -> HTTPure.Request
   -> Aff HTTPure.Response
-collectionHandlerWithBody bodyDecoder handler httpureRequest =
+collectionHandlerWithBody bodyDecoder bodyError handler httpureRequest =
   case Request.fromRequest bodyDecoder unit httpureRequest of
-    Nothing -> HTTPure.badRequest "TODO" -- TODO
-    Just request -> handler request
+    Left errors -> bodyError errors
+    Right request -> handler request
 
 
 instanceHandler
@@ -269,22 +301,23 @@ instanceHandler
   -> HTTPure.Request
   -> Aff HTTPure.Response
 instanceHandler handler id httpureRequest =
-  case Request.fromRequest (const $ Just unit) id httpureRequest of
-    Nothing -> HTTPure.badRequest "TODO"  -- TODO
-    Just request -> handler request
+  handler $
+    unsafePartial Either.fromRight $
+      Request.fromRequest (const $ Right unit) id httpureRequest
 
 
 instanceHandlerWithBody
   :: forall id requestBody
-   . (String -> Maybe requestBody)
+   . (String -> Either BodyErrors requestBody)
+  -> (BodyErrors -> Aff HTTPure.Response)
   -> (Request.Request id requestBody -> Aff HTTPure.Response)
   -> id
   -> HTTPure.Request
   -> Aff HTTPure.Response
-instanceHandlerWithBody bodyDecoder handler id httpureRequest@{ body } =
+instanceHandlerWithBody bodyDecoder bodyError handler id httpureRequest@{ body } =
   case Request.fromRequest bodyDecoder id httpureRequest of
-    Nothing -> HTTPure.badRequest "TODO" -- TODO
-    Just request -> handler request
+    Left err -> bodyError err
+    Right request -> handler request
 
 
 runStandardHandler

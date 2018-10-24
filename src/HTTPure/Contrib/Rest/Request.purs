@@ -2,7 +2,9 @@ module HTTPure.Contrib.Rest.Request (Request, fromRequest) where
 
 import Prelude
 
+import Data.Either (Either)
 import Data.Maybe (Maybe)
+import Foreign as Foreign
 import HTTPure as HTTPure
 
 type Request id body =
@@ -16,10 +18,10 @@ type Request id body =
 
 fromRequest
   :: forall id body
-   . (String -> Maybe body)
+   . (String -> Either Foreign.MultipleErrors body)
   -> id
   -> HTTPure.Request
-  -> Maybe (Request id body)
+  -> Either Foreign.MultipleErrors (Request id body)
 fromRequest readBody id { method, path, query, headers, body } = do
   body' <- readBody body
   pure $ { method, path, query, headers, id, body: body' }
