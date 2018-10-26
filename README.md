@@ -1,30 +1,28 @@
-# HTTPure REST Router
+# HTTPure Extras
 
-REST router and endpoint helpers for HTTPure.
+Various extras to be used with [HTTPure].
 
-## Installation
+- Path prefix based router
+- REST endpoints
+- HTTP Basic authentication
+- Static file serving
 
-Depends on unpublished version of `purescript-httpure`, so you need to
-clone and link it:
+**Note**: The HTTP Basic authentication support
+(`HTTPure.Contrib.Auth`) requires the `npm` package `text-encoding` to
+be installed.
 
-```
-git clone https://github.com/cprussin/purescript-httpure
-cd purescript-httpure
-bower link
-cd ..
-
-git clone https://github.com/cprussin/purescript-httpure-rest-router
-cd purescript-httpure-rest-router
-bower link purescript-httpure
-```
+[HTTPure]: https://github.com/cprussin/purescript-httpure
 
 ## Examples
 
-Run any of the examples like this:
+Examples are in the `examples/` diretory. Run them like this,
+substituting `Todo` with the name of an example:
 
 ```
 pulp run -I examples -m Todo
 ```
+
+Here's the list of examples:
 
 [Todo.purs](https://github.com/cprussin/purescript-httpure-rest-router/tree/master/examples/Todo.purs)
 
