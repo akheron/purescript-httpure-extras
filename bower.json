@@ -7,12 +7,32 @@
     "output"
   ],
   "dependencies": {
+    "purescript-aff": "^5.0.2",
+    "purescript-arraybuffer": "^8.0.0",
+    "purescript-arrays": "^5.1.0",
+    "purescript-base64-codec": "^0.10.3",
+    "purescript-control": "^4.1.0",
+    "purescript-effect": "^2.0.0",
+    "purescript-either": "^4.0.0",
+    "purescript-foldable-traversable": "^4.1.0",
+    "purescript-foreign": "^5.0.0",
+    "purescript-foreign-generic": "^7.0.0",
+    "purescript-httpure": "https://github.com/cprussin/purescript-httpure.git#master",
+    "purescript-integers": "^4.0.0",
+    "purescript-maybe": "^4.0.0",
+    "purescript-media-types": "^4.0.1",
+    "purescript-node-fs-aff": "^6.0.0",
+    "purescript-node-path": "^3.0.0",
+    "purescript-partial": "^2.0.0",
     "purescript-prelude": "^4.1.0",
-    "purescript-httpure": "^0.7.1",
-    "purescript-foreign-generic": "^7.0.0"
+    "purescript-refs": "^4.1.0",
+    "purescript-strings": "^4.0.0",
+    "purescript-transformers": "^4.1.0",
+    "purescript-tuples": "^5.0.0"
   },
   "devDependencies": {
     "purescript-console": "^4.1.0",
+    "purescript-newtype": "^3.0.0",
     "purescript-psci-support": "^4.0.0"
   }
 }
