@@ -3,7 +3,6 @@ module HTTPure.Contrib.Rest.Request (Request, fromRequest) where
 import Prelude
 
 import Data.Either (Either)
-import Data.Maybe (Maybe)
 import Foreign as Foreign
 import HTTPure as HTTPure
 
