@@ -1,5 +1,5 @@
 {
-  "name": "purescript-httpure-rest-router",
+  "name": "purescript-httpure-extras",
   "ignore": [
     "**/.*",
     "node_modules",
